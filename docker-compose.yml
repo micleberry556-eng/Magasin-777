@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # === INFRASTRUCTURE ===
+  postgres:
+    image: postgres:14-alpine
+    container_name: lm_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_NAME:-localmarket}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sh:/docker-entrypoint-initdb.d/init_db.sh
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-localmarket}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - localmarket
+
+  redis:
+    image: redis:7-alpine
+    container_name: lm_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - localmarket
+
+  minio:
+    image: minio/minio
+    container_name: lm_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - localmarket
+
+  # === BACKEND SERVICES ===
+  evaluator-service:
+    build: ./services/evaluator
+    container_name: lm_evaluator
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-admin}:${DB_PASSWORD:-secret}@postgres:5432/${DB_NAME:-localmarket}
+      - EVALUATOR_EXTERNAL_URL=${EVALUATOR_EXTERNAL_URL:-}
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - localmarket
+
+  # === FRONTEND ===
+  frontend:
+    build: ./frontend
+    container_name: lm_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    networks:
+      - localmarket
+
+  # === API GATEWAY ===
+  gateway:
+    image: nginx:alpine
+    container_name: lm_gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./services/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - evaluator-service
+      - frontend
+    networks:
+      - localmarket
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  localmarket:
+    driver: bridge
