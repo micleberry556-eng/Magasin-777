@@ -1,81 +1,92 @@
-import { useState } from "react";
+/**
+ * Home page — hero + featured products + categories.
+ */
+import { useState, useEffect } from "react";
+import Head from "next/head";
+import Link from "next/link";
+import ProductCard from "../components/ProductCard";
+import { useLang } from "../lib/useLang";
+import { useTheme } from "../lib/useTheme";
 
 export default function Home() {
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const { t } = useLang();
+  const { settings } = useTheme();
+  const [featured, setFeatured] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  const testEvaluator = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/v1/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          base_price: 1000.0,
-          params: {
-            rating: 4.8,
-            sales_velocity: 50,
-            category: "electronics",
-          },
-        }),
-      });
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
-      setResult({ error: err.message });
-    }
-    setLoading(false);
-  };
+  useEffect(() => {
+    fetch("/api/products?featured=true&limit=8")
+      .then((r) => r.json())
+      .then(setFeatured)
+      .catch(() => {});
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
+
+  const seoTitle = settings?.seo_title || settings?.site_name || "LocalMarket";
+  const seoDesc = settings?.seo_description || "";
 
   return (
-    <div style={{ fontFamily: "sans-serif", maxWidth: 800, margin: "0 auto", padding: 40 }}>
-      <h1>LocalMarket</h1>
-      <p style={{ color: "#666" }}>
-        Микросервисная платформа маркетплейса — MVP
-      </p>
+    <>
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
+        {settings?.seo_keywords && (
+          <meta name="keywords" content={settings.seo_keywords} />
+        )}
+      </Head>
 
-      <hr />
-
-      <h2>Сервисы</h2>
-      <ul>
-        <li><strong>Evaluator API:</strong> <code>/api/v1/evaluate</code></li>
-        <li><strong>Catalog API:</strong> <code>/api/catalog</code> (заглушка)</li>
-        <li><strong>Auth API:</strong> <code>/api/auth</code> (заглушка)</li>
-      </ul>
-
-      <h2>Тест сервиса оценки</h2>
-      <button
-        onClick={testEvaluator}
-        disabled={loading}
-        style={{
-          padding: "10px 20px",
-          fontSize: 16,
-          cursor: "pointer",
-          background: "#0070f3",
-          color: "#fff",
-          border: "none",
-          borderRadius: 6,
-        }}
+      {/* Hero */}
+      <section
+        className="hero"
+        style={settings?.background_url ? {
+          backgroundImage: `url(${settings.background_url})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        } : {}}
       >
-        {loading ? "Загрузка..." : "Оценить товар"}
-      </button>
+        <div className="container">
+          <h1>{settings?.site_name || "LocalMarket"}</h1>
+          <p>{settings?.site_description || t.catalog}</p>
+          <div style={{ marginTop: "1.5rem" }}>
+            <Link href="/catalog" className="btn btn-accent" style={{ textDecoration: "none" }}>
+              {t.catalog}
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      {result && (
-        <pre style={{
-          marginTop: 20,
-          padding: 20,
-          background: "#f5f5f5",
-          borderRadius: 8,
-          overflow: "auto",
-        }}>
-          {JSON.stringify(result, null, 2)}
-        </pre>
+      {/* Categories */}
+      {categories.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <h2 className="section-title">{t.categories}</h2>
+            <div className="cat-pills">
+              {categories.map((cat) => (
+                <Link key={cat.id} href={`/catalog?category=${cat.slug}`}>
+                  <span className="cat-pill">{cat.name}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
 
-      <hr />
-      <p style={{ color: "#999", fontSize: 14 }}>
-        LocalMarket MVP &copy; 2025
-      </p>
-    </div>
+      {/* Featured products */}
+      {featured.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <h2 className="section-title">{t.featured}</h2>
+            <div className="product-grid">
+              {featured.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+    </>
   );
 }

@@ -1,36 +1,120 @@
-# LocalMarket
+# LocalMarket — Интернет-магазин
 
-Микросервисная платформа маркетплейса с Docker Compose оркестрацией.
+Полнофункциональный интернет-магазин с админ-панелью, 300 темами оформления, мультиязычностью (13 языков), учетом товаров и SEO.
+
+---
+
+## Возможности
+
+**Магазин (Frontend):**
+- Главная страница с hero-секцией, категориями и рекомендуемыми товарами
+- Каталог с фильтрацией по категориям и поиском
+- Карточка товара с описанием, ценой, остатками, SEO
+- Корзина с изменением количества
+- Оформление заказа с формой доставки
+- CMS-страницы (О нас, Контакты и любые другие)
+- Мультиязычность: 13 языков (RU, EN, KK, UZ, TG, KY, AZ, TR, ZH, MS, TH, VI, ID)
+- Динамическая тема оформления (цвета, шрифты, скругления, layout)
+
+**Админ-панель (`/admin`):**
+- Авторизация с JWT-токеном
+- Dashboard со статистикой
+- Управление товарами (CRUD, SEO, изображения, featured)
+- Управление категориями
+- Управление заказами (просмотр, смена статуса)
+- Учет товаров / складской учет (приход, расход, корректировки, история)
+- CMS-страницы (создание, редактирование, HTML-контент)
+- 300 тем оформления (8 категорий: светлые, темные, яркие, минималистичные, неоновые, пастельные, корпоративные, градиентные)
+- Настройки сайта: название, описание, логотип, фавикон, фон
+- SEO: title, description, keywords, аналитика
+- Загрузка изображений (логотип, фон, товары)
+- Смена пароля администратора
+- Выбор языка по умолчанию и валюты
 
 ---
 
 ## Структура проекта
 
 ```
-localmarket/
-├── docker-compose.yml          # Основной файл оркестрации
-├── .env.example                # Шаблон конфигурации
-├── deploy.sh                   # Скрипт развертывания
+Magasin-777/
+├── docker-compose.yml              # Оркестрация всех сервисов
+├── .env.example                    # Шаблон конфигурации
+├── deploy.sh                       # Скрипт развертывания
 ├── services/
-│   ├── gateway/                # API Gateway (Nginx)
-│   │   └── nginx.conf
-│   ├── auth/                   # Auth Service (заглушка)
-│   ├── catalog/                # Catalog Service (заглушка)
-│   ├── evaluator/              # Web-сервис оценки/процентов (Python/FastAPI)
-│   │   ├── Dockerfile
-│   │   └── app/
-│   │       ├── main.py
-│   │       └── requirements.txt
-├── frontend/                   # Next.js приложение
+│   ├── gateway/
+│   │   └── nginx.conf              # API Gateway
+│   └── evaluator/
+│       ├── Dockerfile
+│       └── app/
+│           ├── main.py             # Точка входа FastAPI
+│           ├── requirements.txt
+│           ├── core/
+│           │   ├── config.py       # Конфигурация
+│           │   ├── database.py     # SQLAlchemy engine
+│           │   ├── security.py     # JWT, bcrypt
+│           │   ├── i18n.py         # 13 языков перевода
+│           │   └── themes_generator.py  # Генератор 300 тем
+│           ├── models/             # SQLAlchemy модели
+│           │   ├── user.py
+│           │   ├── product.py      # Product, Category, StockMovement
+│           │   ├── order.py        # Order, OrderItem
+│           │   └── site.py         # SiteSettings, Page, Theme
+│           ├── schemas/            # Pydantic схемы
+│           │   ├── auth.py
+│           │   ├── product.py
+│           │   ├── order.py
+│           │   └── site.py
+│           └── routers/            # API эндпоинты
+│               ├── admin_auth.py
+│               ├── products.py
+│               ├── categories.py
+│               ├── orders.py
+│               ├── pages.py
+│               ├── settings.py
+│               ├── themes.py
+│               ├── stock.py
+│               └── upload.py
+├── frontend/
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── next.config.js
+│   ├── styles/
+│   │   ├── globals.css             # Стили магазина (CSS Variables)
+│   │   └── admin.css               # Стили админ-панели
+│   ├── lib/
+│   │   ├── api.js                  # API клиент
+│   │   ├── useCart.js              # Контекст корзины
+│   │   ├── useLang.js             # Контекст мультиязычности
+│   │   ├── useTheme.js            # Контекст темы оформления
+│   │   └── useAdmin.js            # Контекст авторизации админа
+│   ├── components/
+│   │   ├── Layout.js              # Основной layout магазина
+│   │   ├── ProductCard.js         # Карточка товара
+│   │   └── admin/
+│   │       └── AdminLayout.js     # Layout админ-панели
 │   └── pages/
-│       └── index.js
-├── scripts/
-│   ├── init_db.sh              # Инициализация БД (таблицы + seed-данные)
-│   └── backup.sh               # Скрипт резервного копирования БД
-└── data/                       # Тома для данных (создаются автоматически)
+│       ├── _app.js                # Провайдеры (Cart, Lang, Theme)
+│       ├── index.js               # Главная страница
+│       ├── catalog/
+│       │   ├── index.js           # Каталог
+│       │   └── [slug].js          # Карточка товара
+│       ├── cart/index.js          # Корзина
+│       ├── checkout/index.js      # Оформление заказа
+│       ├── page/[slug].js         # CMS-страница
+│       └── admin/
+│           ├── index.js           # Логин
+│           ├── dashboard.js       # Dashboard
+│           ├── products.js        # Управление товарами
+│           ├── categories.js      # Управление категориями
+│           ├── orders.js          # Управление заказами
+│           ├── stock.js           # Учет товаров
+│           ├── pages.js           # CMS-страницы
+│           ├── themes.js          # 300 тем оформления
+│           ├── settings.js        # Настройки сайта / SEO
+│           └── password.js        # Смена пароля
+└── scripts/
+    ├── backup.sh                  # Резервное копирование БД
+    └── init_db.sh                 # (legacy) Инициализация БД
 ```
 
 ---
@@ -38,278 +122,234 @@ localmarket/
 ## Требования
 
 - **Docker** >= 20.10
-- **Docker Compose** >= 2.0 (или `docker-compose` v1.29+)
-
-Установка Docker:
-- Linux: https://docs.docker.com/engine/install/
-- macOS: https://docs.docker.com/desktop/install/mac-install/
-- Windows: https://docs.docker.com/desktop/install/windows-install/
+- **Docker Compose** >= 2.0
 
 ---
 
-## Быстрый старт
+## Установка и запуск
 
-### 1. Клонирование репозитория
+### 1. Клонирование
 
 ```bash
 git clone https://github.com/micleberry556-eng/Magasin-777.git
 cd Magasin-777
 ```
 
-### 2. Настройка окружения
-
-Скопируйте шаблон конфигурации и при необходимости измените значения:
+### 2. Настройка
 
 ```bash
 cp .env.example .env
 ```
 
-Основные переменные в `.env`:
+Отредактируйте `.env` при необходимости:
 
-| Переменная              | По умолчанию | Описание                                      |
-|-------------------------|--------------|-----------------------------------------------|
-| `DB_USER`               | `admin`      | Пользователь PostgreSQL                       |
-| `DB_PASSWORD`           | `secret`     | Пароль PostgreSQL                             |
-| `DB_NAME`               | `localmarket`| Имя базы данных                               |
-| `MINIO_ROOT_USER`       | `minioadmin` | Логин MinIO                                   |
-| `MINIO_ROOT_PASSWORD`   | `minioadmin` | Пароль MinIO                                  |
-| `EVALUATOR_EXTERNAL_URL`| _(пусто)_    | URL внешнего сервиса оценки (опционально)     |
+| Переменная       | По умолчанию              | Описание                          |
+|------------------|---------------------------|-----------------------------------|
+| `DB_USER`        | `admin`                   | Пользователь PostgreSQL           |
+| `DB_PASSWORD`    | `secret`                  | Пароль PostgreSQL                 |
+| `SECRET_KEY`     | `change-me-in-production` | Секретный ключ JWT                |
+| `ADMIN_EMAIL`    | `admin@localmarket.com`   | Email администратора              |
+| `ADMIN_PASSWORD` | `admin123`                | Пароль администратора             |
 
-> **Важно:** Для продакшен-среды обязательно измените пароли по умолчанию.
+> **Важно:** Для продакшена обязательно измените `SECRET_KEY`, `DB_PASSWORD` и `ADMIN_PASSWORD`.
 
-### 3. Запуск (автоматический)
+### 3. Запуск
 
 ```bash
-chmod +x deploy.sh scripts/init_db.sh scripts/backup.sh
+chmod +x deploy.sh
 ./deploy.sh
 ```
 
-Скрипт автоматически:
-1. Проверит наличие Docker и Docker Compose
-2. Создаст `.env` из шаблона (если не существует)
-3. Соберет все контейнеры
-4. Запустит сервисы
-5. Дождется готовности базы данных
-
-### 4. Запуск (ручной)
-
-Если вы предпочитаете запускать вручную:
+Или вручную:
 
 ```bash
-cp .env.example .env
 docker compose build
 docker compose up -d
 ```
 
----
+### 4. Первый запуск
 
-## Доступ к сервисам
-
-После запуска доступны следующие адреса:
-
-| Сервис            | URL                          | Описание                        |
-|-------------------|------------------------------|---------------------------------|
-| Frontend          | http://localhost:3000         | Web-интерфейс (Next.js)        |
-| API Gateway       | http://localhost:8080         | Единая точка входа (Nginx)     |
-| Evaluator API     | http://localhost:8001         | Прямой доступ к сервису оценки |
-| MinIO Console     | http://localhost:9001         | Консоль объектного хранилища   |
-| PostgreSQL        | `localhost:5432`             | База данных                     |
-| Redis             | `localhost:6379`             | Кэш / очереди                  |
+При первом запуске автоматически:
+- Создаются все таблицы в БД
+- Создается администратор (из `.env`)
+- Генерируются 300 тем оформления
+- Создаются демо-категории и товары
 
 ---
 
-## API: Сервис оценки
+## Доступ
 
-### POST `/api/v1/evaluate`
+| Сервис          | URL                      | Описание                    |
+|-----------------|--------------------------|-----------------------------|
+| Магазин         | http://localhost:8080     | Главная страница магазина   |
+| Админ-панель    | http://localhost:8080/admin | Вход в админку            |
+| API (прямой)    | http://localhost:8001     | FastAPI backend             |
+| MinIO Console   | http://localhost:9001     | Объектное хранилище         |
 
-Оценка товара и расчет комиссии.
+**Вход в админ-панель:**
+- Email: `admin@localmarket.com`
+- Пароль: `admin123`
 
-**Запрос:**
+---
 
-```bash
-curl -X POST http://localhost:8080/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "base_price": 1000.0,
-    "params": {
-      "rating": 4.8,
-      "sales_velocity": 50,
-      "category": "electronics"
-    }
-  }'
+## Админ-панель — Возможности
+
+### Dashboard
+Обзор: количество товаров, общий остаток на складе, товары с низким остатком.
+
+### Товары
+- Создание, редактирование, удаление товаров
+- Поля: название, slug, описание, цена, старая цена, SKU, остаток, категория, изображение
+- SEO: title и description для каждого товара
+- Флаги: активный, рекомендуемый
+
+### Категории
+- CRUD категорий с slug и сортировкой
+
+### Заказы
+- Просмотр всех заказов с фильтрацией по статусу
+- Детали заказа: клиент, товары, суммы
+- Смена статуса: new → processing → shipped → delivered / cancelled
+
+### Учет товаров (Inventory)
+- Сводка: общее количество товаров, общий остаток, товары с низким остатком
+- Запись движений: приход (purchase), возврат (return), корректировка (adjustment), ручная продажа (sale)
+- История всех движений
+
+### CMS-страницы
+- Создание произвольных страниц (О нас, Контакты, Доставка и т.д.)
+- HTML-редактор контента
+- SEO для каждой страницы
+- Публикация / снятие с публикации
+
+### Темы оформления (300 шт.)
+- 8 категорий: светлые, темные, яркие, минималистичные, неоновые, пастельные, корпоративные, градиентные
+- Каждая тема: цвета (primary, secondary, accent, bg, text, header, footer), шрифт, скругления, layout
+- Визуальный превью каждой темы
+- Активация темы одним кликом — мгновенно применяется на сайте
+
+### Настройки сайта
+- Название и описание сайта
+- Логотип, фавикон, фоновое изображение (загрузка файлов)
+- SEO: title, description, keywords, код аналитики
+- Язык по умолчанию (13 языков)
+- Валюта (14 валют: USD, EUR, RUB, KZT, UZS, TJS, KGS, AZN, TRY, CNY, MYR, THB, VND, IDR)
+- Контактная информация
+
+### Смена пароля
+- Изменение пароля администратора из панели
+
+---
+
+## Мультиязычность
+
+Поддерживаемые языки:
+
+| Код | Язык              |
+|-----|-------------------|
+| ru  | Русский           |
+| en  | English           |
+| kk  | Қазақша           |
+| uz  | O'zbek            |
+| tg  | Тоҷикӣ            |
+| ky  | Кыргызча          |
+| az  | Azərbaycan        |
+| tr  | Türkçe            |
+| zh  | 中文              |
+| ms  | Bahasa Melayu     |
+| th  | ไทย               |
+| vi  | Tiếng Việt        |
+| id  | Bahasa Indonesia  |
+
+Переключение языка — в шапке сайта. Выбор сохраняется в localStorage.
+
+---
+
+## API
+
+### Публичные эндпоинты
+
+```
+GET  /api/products              — Список товаров (фильтры: category_id, featured, search)
+GET  /api/products/{slug}       — Товар по slug
+GET  /api/categories            — Список категорий
+GET  /api/categories/{slug}     — Категория по slug
+POST /api/orders                — Создание заказа
+GET  /api/pages                 — Список опубликованных страниц
+GET  /api/pages/{slug}          — Страница по slug
+GET  /api/settings              — Настройки сайта
+GET  /api/themes                — Список тем (фильтр: category)
+GET  /api/themes/categories     — Категории тем с количеством
+GET  /api/themes/{id}           — Тема по ID
+GET  /api/i18n                  — Список языков
+GET  /api/i18n/{lang}           — Переводы для языка
+GET  /health                    — Health check
 ```
 
-**Ответ:**
+### Админ эндпоинты (требуют JWT)
 
-```json
-{
-  "score": 77.6,
-  "recommended_price": 1077.6,
-  "commission_percent": 9.5,
-  "rationale": "Score calculated: rating=4.8 (weight 0.6), sales_velocity=50 (weight 0.4). Category 'electronics' base commission 10.0%. Loyalty discount applied."
-}
 ```
-
-**Параметры запроса:**
-
-| Поле          | Тип    | Обязательное | Описание                              |
-|---------------|--------|:------------:|---------------------------------------|
-| `product_id`  | string | Нет          | ID товара                             |
-| `seller_id`   | string | Нет          | ID продавца                           |
-| `base_price`  | float  | Да           | Базовая цена товара                   |
-| `params`      | object | Нет          | Дополнительные параметры              |
-
-**Параметры `params`:**
-
-| Поле             | Тип    | По умолчанию | Описание                          |
-|------------------|--------|:------------:|-----------------------------------|
-| `rating`         | float  | `4.0`        | Рейтинг товара/продавца (0-5)    |
-| `sales_velocity` | int    | `10`         | Продаж в месяц                    |
-| `category`       | string | `"default"`  | Категория (`electronics`, `clothing`, `food`) |
-
-### GET `/health`
-
-Проверка работоспособности сервиса.
-
-```bash
-curl http://localhost:8080/api/v1/health
+POST   /api/admin/login                    — Авторизация
+POST   /api/admin/change-password          — Смена пароля
+GET    /api/admin/me                       — Информация об админе
+GET    /api/admin/products                 — Все товары
+POST   /api/admin/products                 — Создать товар
+PATCH  /api/admin/products/{id}            — Обновить товар
+DELETE /api/admin/products/{id}            — Удалить товар
+POST   /api/admin/categories              — Создать категорию
+PATCH  /api/admin/categories/{id}         — Обновить категорию
+DELETE /api/admin/categories/{id}         — Удалить категорию
+GET    /api/admin/orders                  — Список заказов
+GET    /api/admin/orders/{id}             — Детали заказа
+PATCH  /api/admin/orders/{id}/status      — Обновить статус заказа
+GET    /api/admin/pages                   — Все страницы
+POST   /api/admin/pages                   — Создать страницу
+PATCH  /api/admin/pages/{id}             — Обновить страницу
+DELETE /api/admin/pages/{id}             — Удалить страницу
+PATCH  /api/admin/settings               — Обновить настройки сайта
+POST   /api/admin/themes/{id}/activate   — Активировать тему
+GET    /api/admin/stock                  — История движений
+POST   /api/admin/stock                  — Записать движение
+GET    /api/admin/stock/summary          — Сводка по складу
+POST   /api/admin/upload                 — Загрузка файла
 ```
 
 ---
 
-## Алгоритм оценки
-
-Встроенный алгоритм (раздел 13 ТЗ):
-
-1. **Score (0-100):**
-   - `score = (rating / 5.0 * 100) * 0.6 + (sales_velocity / 100 * 100) * 0.4`
-
-2. **Комиссия:**
-   - Базовая ставка зависит от категории: `electronics` = 10%, `clothing` = 12%, `food` = 8%, остальные = 15%
-   - Скидка за лояльность: -5% к комиссии при рейтинге > 4.5
-
-3. **Рекомендуемая цена:**
-   - `recommended_price = base_price * (1 + score / 1000)`
-
-Для использования внешнего сервиса оценки укажите его URL в переменной `EVALUATOR_EXTERNAL_URL` в файле `.env`. При ошибке внешнего сервиса система автоматически переключится на встроенный алгоритм (fallback).
-
----
-
-## База данных
-
-При первом запуске автоматически создаются таблицы и seed-данные:
-
-**Таблицы:**
-- `users` — пользователи (admin, seller, buyer)
-- `categories` — категории товаров
-- `products` — товары
-- `orders` — заказы
-- `order_items` — позиции заказов
-
-**Seed-данные:**
-- Администратор: `admin@local.market`
-- Продавец: `seller@local.market`
-- Покупатель: `buyer@local.market`
-- 3 демо-товара в категории "Электроника"
-
-Подключение к БД напрямую:
+## Управление
 
 ```bash
-docker exec -it lm_postgres psql -U admin -d localmarket
-```
+# Статус контейнеров
+docker compose ps
 
----
+# Логи
+docker compose logs -f
 
-## Резервное копирование
+# Перезапуск
+docker compose restart
 
-Создание бэкапа базы данных:
+# Остановка
+docker compose down
 
-```bash
+# Пересборка
+docker compose up -d --build
+
+# Бэкап БД
 ./scripts/backup.sh
 ```
 
-Бэкапы сохраняются в директорию `./backups/` с меткой времени. Бэкапы старше 30 дней удаляются автоматически.
-
-Восстановление из бэкапа:
-
-```bash
-gunzip -c backups/localmarket_YYYYMMDD_HHMMSS.sql.gz | \
-  docker exec -i lm_postgres psql -U admin -d localmarket
-```
-
 ---
 
-## Управление сервисами
+## Технологии
 
-```bash
-# Просмотр статуса контейнеров
-docker compose ps
-
-# Просмотр логов всех сервисов
-docker compose logs -f
-
-# Логи конкретного сервиса
-docker compose logs -f evaluator-service
-
-# Перезапуск сервиса
-docker compose restart evaluator-service
-
-# Остановка всех сервисов
-docker compose down
-
-# Остановка с удалением данных (volumes)
-docker compose down -v
-
-# Пересборка и перезапуск
-docker compose up -d --build
-```
-
----
-
-## Архитектура
-
-```
-┌─────────────┐     ┌──────────────────┐     ┌───────────────────┐
-│   Browser    │────>│  Nginx Gateway   │────>│ Evaluator Service │
-│  :3000/:8080 │     │     :80 (8080)   │     │   (FastAPI :8000) │
-└─────────────┘     └──────────────────┘     └───────────────────┘
-                            │                         │
-                            │                         │
-                    ┌───────▼────────┐       ┌────────▼────────┐
-                    │   Frontend     │       │   PostgreSQL    │
-                    │  (Next.js)     │       │    :5432        │
-                    │   :3000        │       └─────────────────┘
-                    └────────────────┘
-                                             ┌─────────────────┐
-                                             │     Redis       │
-                                             │    :6379        │
-                                             └─────────────────┘
-
-                                             ┌─────────────────┐
-                                             │     MinIO       │
-                                             │  :9000 / :9001  │
-                                             └─────────────────┘
-```
-
----
-
-## Что реализовано (MVP)
-
-- **Микросервисная архитектура** в Docker Compose с единой сетью
-- **PostgreSQL** с автоматическим созданием таблиц и seed-данными
-- **Сервис оценки (Evaluator)** на FastAPI — полный алгоритм расчета score, комиссии и рекомендуемой цены
-- **API Gateway (Nginx)** с маршрутизацией к микросервисам и поддержкой WebSocket
-- **Frontend (Next.js)** с тестовой страницей и кнопкой проверки API
-- **MinIO** — объектное хранилище (S3-совместимое)
-- **Redis** — кэш и очереди сообщений
-- **Скрипты:** автоматическое развертывание, инициализация БД, резервное копирование
-- **Офлайн-режим:** все образы кэшируются локально после первой сборки
-- **Безопасность:** переменные окружения вынесены в `.env`
-
-## Заглушки для будущей разработки
-
-- `POST /api/catalog` — сервис каталога
-- `POST /api/auth` — сервис авторизации
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2.0, Pydantic v2
+- **Frontend:** Next.js 14, React 18
+- **Database:** PostgreSQL 14
+- **Cache:** Redis 7
+- **Storage:** MinIO (S3-compatible)
+- **Gateway:** Nginx
+- **Auth:** JWT + bcrypt
+- **Container:** Docker Compose
 
 ---
 

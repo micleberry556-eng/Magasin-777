@@ -11,7 +11,6 @@ services:
       POSTGRES_DB: ${DB_NAME:-localmarket}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init_db.sh:/docker-entrypoint-initdb.d/init_db.sh
     ports:
       - "5432:5432"
     healthcheck:
@@ -47,13 +46,17 @@ services:
     networks:
       - localmarket
 
-  # === BACKEND SERVICES ===
+  # === BACKEND API ===
   evaluator-service:
     build: ./services/evaluator
-    container_name: lm_evaluator
+    container_name: lm_backend
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-admin}:${DB_PASSWORD:-secret}@postgres:5432/${DB_NAME:-localmarket}
-      - EVALUATOR_EXTERNAL_URL=${EVALUATOR_EXTERNAL_URL:-}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-very-secret-key-2026}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localmarket.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    volumes:
+      - uploads_data:/app/static/uploads
     ports:
       - "8001:8000"
     depends_on:
@@ -70,6 +73,8 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - evaluator-service
     networks:
       - localmarket
 
@@ -91,6 +96,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  uploads_data:
 
 networks:
   localmarket:
