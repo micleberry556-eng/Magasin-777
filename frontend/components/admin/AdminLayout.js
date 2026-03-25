@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAdmin } from "../../lib/useAdmin";
-import "../../styles/admin.css";
 
 export default function AdminLayout({ children }) {
   const { token, loading, logout } = useAdmin();

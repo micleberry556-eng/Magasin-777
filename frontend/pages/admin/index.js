@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { useAdmin } from "../../lib/useAdmin";
-import "../../styles/admin.css";
 
 function AdminLogin() {
   const { token, login } = useAdmin();
