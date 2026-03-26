@@ -74,6 +74,10 @@ def _seed_admin(db):
                 name="Administrator",
             )
         )
+    else:
+        # Re-hash password on every startup to fix bcrypt compatibility issues
+        existing.password_hash = hash_password(DEFAULT_ADMIN_PASSWORD)
+        existing.role = "admin"
 
 
 def _seed_settings(db):
@@ -107,59 +111,34 @@ def _seed_themes(db):
 
 
 def _seed_demo_data(db):
-    """Seed demo categories and products if empty."""
-    if db.query(Category).count() > 0:
+    """Seed 20 categories and 400 products with images if empty."""
+    if db.query(Product).count() >= 400:
         return
 
-    cats = [
-        Category(name="Электроника", slug="electronics", sort_order=1),
-        Category(name="Одежда", slug="clothing", sort_order=2),
-        Category(name="Продукты питания", slug="food", sort_order=3),
-        Category(name="Товары для дома", slug="home", sort_order=4),
-    ]
-    db.add_all(cats)
-    db.flush()
+    from app.core.seed_products import CATEGORIES as SEED_CATEGORIES
+    from app.core.seed_products import generate_all_products
 
-    products_data = [
-        Product(
-            name="Смартфон X",
-            slug="smartphone-x",
-            description="Флагманский смартфон с AMOLED экраном",
-            price=699.99,
-            old_price=799.99,
-            sku="PHONE-001",
-            stock=50,
-            category_id=cats[0].id,
-            rating=4.7,
-            sales_count=150,
-            is_featured=True,
-        ),
-        Product(
-            name="Ноутбук Pro",
-            slug="laptop-pro",
-            description="Профессиональный ноутбук для разработчиков",
-            price=1299.50,
-            sku="LAPTOP-001",
-            stock=25,
-            category_id=cats[0].id,
-            rating=4.9,
-            sales_count=85,
-            is_featured=True,
-        ),
-        Product(
-            name="Беспроводные наушники",
-            slug="wireless-headphones",
-            description="Наушники с активным шумоподавлением",
-            price=199.00,
-            old_price=249.00,
-            sku="AUDIO-001",
-            stock=120,
-            category_id=cats[0].id,
-            rating=4.3,
-            sales_count=320,
-        ),
-    ]
-    db.add_all(products_data)
+    # Create categories
+    cat_map: dict[str, int] = {}
+    for cat_data in SEED_CATEGORIES:
+        existing = db.query(Category).filter(Category.slug == cat_data["slug"]).first()
+        if existing:
+            cat_map[cat_data["slug"]] = existing.id
+        else:
+            cat = Category(**cat_data)
+            db.add(cat)
+            db.flush()
+            cat_map[cat_data["slug"]] = cat.id
+
+    # Create products
+    all_products = generate_all_products()
+    for p_data in all_products:
+        existing = db.query(Product).filter(Product.slug == p_data["slug"]).first()
+        if existing:
+            continue
+        cat_slug = p_data.pop("category_slug")
+        p_data["category_id"] = cat_map.get(cat_slug)
+        db.add(Product(**p_data))
 
 
 # --- Public endpoints ---
