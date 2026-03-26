@@ -1,18 +1,29 @@
 /**
- * Admin auth hook — stores JWT token in localStorage.
+ * Admin auth context — single shared token across all admin pages.
  */
-import { useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
-export function useAdmin() {
+const AdminContext = createContext(null);
+
+export function AdminProvider({ children }) {
   const [token, setTokenState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const tokenRef = useRef(null);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("lm_admin_token");
-      if (saved) setTokenState(saved);
+      if (saved) {
+        setTokenState(saved);
+        tokenRef.current = saved;
+      }
     } catch {}
     setLoading(false);
+  }, []);
+
+  const setToken = useCallback((t) => {
+    setTokenState(t);
+    tokenRef.current = t;
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -26,22 +37,27 @@ export function useAdmin() {
       throw new Error(err.detail || "Login failed");
     }
     const data = await res.json();
-    setTokenState(data.access_token);
+    setToken(data.access_token);
     localStorage.setItem("lm_admin_token", data.access_token);
     return data;
-  }, []);
+  }, [setToken]);
 
   const logout = useCallback(() => {
-    setTokenState(null);
+    setToken(null);
     localStorage.removeItem("lm_admin_token");
-  }, []);
+  }, [setToken]);
 
   const adminFetch = useCallback(async (path, options = {}) => {
+    // Always read from ref to get the latest token, avoiding stale closures
+    const currentToken = tokenRef.current;
+    if (!currentToken) {
+      throw new Error("Not authenticated");
+    }
     const res = await fetch(path, {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${currentToken}`,
         ...options.headers,
       },
     });
@@ -54,7 +70,17 @@ export function useAdmin() {
       throw new Error(err.detail || `Error ${res.status}`);
     }
     return res.json();
-  }, [token, logout]);
+  }, [logout]);
 
-  return { token, loading, login, logout, adminFetch };
+  return (
+    <AdminContext.Provider value={{ token, loading, login, logout, adminFetch }}>
+      {children}
+    </AdminContext.Provider>
+  );
+}
+
+export function useAdmin() {
+  const ctx = useContext(AdminContext);
+  if (!ctx) throw new Error("useAdmin must be used within AdminProvider");
+  return ctx;
 }
