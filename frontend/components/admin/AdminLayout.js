@@ -1,18 +1,36 @@
 /**
  * Admin panel layout with sidebar navigation.
+ * Waits for auth loading to complete before checking token.
  */
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 import { useAdmin } from "../../lib/useAdmin";
 
 export default function AdminLayout({ children }) {
   const { token, loading, logout } = useAdmin();
   const router = useRouter();
 
-  if (loading) return <div className="admin-login"><p style={{ color: "#fff" }}>Loading...</p></div>;
+  useEffect(() => {
+    // Only redirect after loading is done and there's no token
+    if (!loading && !token) {
+      router.replace("/admin");
+    }
+  }, [loading, token, router]);
 
+  // Show nothing while loading auth state from localStorage
+  if (loading) {
+    return (
+      <div className="admin-layout">
+        <div className="admin-main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated — will redirect via useEffect above
   if (!token) {
-    if (typeof window !== "undefined") router.push("/admin");
     return null;
   }
 

@@ -1,5 +1,6 @@
 /**
  * Admin auth context — single shared token across all admin pages.
+ * Always mounted in _app.js to survive page transitions.
  */
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
@@ -10,20 +11,16 @@ export function AdminProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const tokenRef = useRef(null);
 
+  // Read token from localStorage once on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem("lm_admin_token");
       if (saved) {
-        setTokenState(saved);
         tokenRef.current = saved;
+        setTokenState(saved);
       }
     } catch {}
     setLoading(false);
-  }, []);
-
-  const setToken = useCallback((t) => {
-    setTokenState(t);
-    tokenRef.current = t;
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -37,40 +34,52 @@ export function AdminProvider({ children }) {
       throw new Error(err.detail || "Login failed");
     }
     const data = await res.json();
-    setToken(data.access_token);
-    localStorage.setItem("lm_admin_token", data.access_token);
+    tokenRef.current = data.access_token;
+    setTokenState(data.access_token);
+    try { localStorage.setItem("lm_admin_token", data.access_token); } catch {}
     return data;
-  }, [setToken]);
+  }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
-    localStorage.removeItem("lm_admin_token");
-  }, [setToken]);
+    tokenRef.current = null;
+    setTokenState(null);
+    try { localStorage.removeItem("lm_admin_token"); } catch {}
+  }, []);
 
-  const adminFetch = useCallback(async (path, options = {}) => {
-    // Always read from ref to get the latest token, avoiding stale closures
+  // Stable adminFetch — never changes identity, reads token from ref
+  const adminFetchRef = useRef(null);
+  adminFetchRef.current = async (path, options = {}) => {
     const currentToken = tokenRef.current;
     if (!currentToken) {
-      throw new Error("Not authenticated");
+      return null; // Not authenticated yet — return null instead of throwing
     }
     const res = await fetch(path, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${currentToken}`,
-        ...options.headers,
+        ...(options.headers || {}),
       },
     });
-    if (res.status === 401 || res.status === 403) {
-      logout();
-      throw new Error("Session expired");
+    if (res.status === 401) {
+      // Token expired — clear it
+      tokenRef.current = null;
+      setTokenState(null);
+      try { localStorage.removeItem("lm_admin_token"); } catch {}
+      return null;
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || `Error ${res.status}`);
     }
     return res.json();
-  }, [logout]);
+  };
+
+  // Stable function reference that never changes — prevents useEffect re-runs
+  const adminFetch = useCallback(
+    (path, options) => adminFetchRef.current(path, options),
+    []
+  );
 
   return (
     <AdminContext.Provider value={{ token, loading, login, logout, adminFetch }}>

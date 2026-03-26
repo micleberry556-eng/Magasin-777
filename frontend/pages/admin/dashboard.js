@@ -7,18 +7,19 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import { useAdmin } from "../../lib/useAdmin";
 
 function Dashboard() {
-  const { adminFetch } = useAdmin();
+  const { adminFetch, loading, token } = useAdmin();
   const [stats, setStats] = useState({ products: 0, orders: 0, stock: null });
 
   useEffect(() => {
+    if (loading || !token) return;
     Promise.all([
-      adminFetch("/api/admin/products?limit=1").then((r) => r.length !== undefined ? r : []),
-      adminFetch("/api/admin/orders?limit=1").then((r) => r.length !== undefined ? r : []),
+      adminFetch("/api/admin/products?limit=1").then((r) => Array.isArray(r) ? r : []),
+      adminFetch("/api/admin/orders?limit=1").then((r) => Array.isArray(r) ? r : []),
       adminFetch("/api/admin/stock/summary").catch(() => null),
     ]).then(([products, orders, stock]) => {
       setStats({ products: products.length, orders: orders.length, stock });
     }).catch(() => {});
-  }, [adminFetch]);
+  }, [loading, token, adminFetch]);
 
   return (
     <AdminLayout>

@@ -9,7 +9,7 @@ import { useAdmin } from "../../lib/useAdmin";
 const EMPTY = { name: "", slug: "", description: "", price: "", old_price: "", sku: "", stock: "0", category_id: "", image: "", is_active: true, is_featured: false, seo_title: "", seo_description: "" };
 
 function Products() {
-  const { adminFetch } = useAdmin();
+  const { adminFetch, loading, token } = useAdmin();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [editing, setEditing] = useState(null); // null=list, "new"=create, id=edit
@@ -17,10 +17,11 @@ function Products() {
   const [error, setError] = useState("");
 
   const load = () => {
-    adminFetch("/api/admin/products?limit=200").then(setProducts).catch(() => {});
-    adminFetch("/api/categories").then(setCategories).catch(() => {});
+    if (!token) return;
+    adminFetch("/api/admin/products?limit=200").then((r) => r && setProducts(r)).catch(() => {});
+    adminFetch("/api/categories").then((r) => r && setCategories(r)).catch(() => {});
   };
-  useEffect(load, [adminFetch]);
+  useEffect(() => { if (!loading && token) load(); }, [loading, token]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

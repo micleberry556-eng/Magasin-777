@@ -7,7 +7,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import { useAdmin } from "../../lib/useAdmin";
 
 function Stock() {
-  const { adminFetch } = useAdmin();
+  const { adminFetch, loading, token } = useAdmin();
   const [movements, setMovements] = useState([]);
   const [summary, setSummary] = useState(null);
   const [products, setProducts] = useState([]);
@@ -16,11 +16,12 @@ function Stock() {
   const [success, setSuccess] = useState(false);
 
   const load = () => {
-    adminFetch("/api/admin/stock?limit=100").then(setMovements).catch(() => {});
-    adminFetch("/api/admin/stock/summary").then(setSummary).catch(() => {});
-    adminFetch("/api/admin/products?limit=500").then(setProducts).catch(() => {});
+    if (!token) return;
+    adminFetch("/api/admin/stock?limit=100").then((r) => r && setMovements(r)).catch(() => {});
+    adminFetch("/api/admin/stock/summary").then((r) => r && setSummary(r)).catch(() => {});
+    adminFetch("/api/admin/products?limit=500").then((r) => r && setProducts(r)).catch(() => {});
   };
-  useEffect(load, [adminFetch]);
+  useEffect(() => { if (!loading && token) load(); }, [loading, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

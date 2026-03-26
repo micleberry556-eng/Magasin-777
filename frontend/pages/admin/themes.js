@@ -7,7 +7,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import { useAdmin } from "../../lib/useAdmin";
 
 function Themes() {
-  const { adminFetch } = useAdmin();
+  const { adminFetch, loading, token } = useAdmin();
   const [themes, setThemes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeFilter, setActiveFilter] = useState("");

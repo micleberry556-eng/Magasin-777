@@ -19,15 +19,16 @@ const LANGUAGES = [
 const CURRENCIES = ["USD", "EUR", "RUB", "KZT", "UZS", "TJS", "KGS", "AZN", "TRY", "CNY", "MYR", "THB", "VND", "IDR"];
 
 function Settings() {
-  const { token, adminFetch } = useAdmin();
+  const { token, adminFetch, loading } = useAdmin();
   const [form, setForm] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    adminFetch("/api/settings").then(setForm).catch(() => {});
-  }, [adminFetch]);
+    if (loading || !token) return;
+    adminFetch("/api/settings").then((r) => r && setForm(r)).catch(() => {});
+  }, [loading, token]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 

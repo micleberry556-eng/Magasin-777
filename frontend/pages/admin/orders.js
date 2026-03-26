@@ -9,17 +9,18 @@ import { useAdmin } from "../../lib/useAdmin";
 const STATUSES = ["new", "processing", "shipped", "delivered", "cancelled"];
 
 function Orders() {
-  const { adminFetch } = useAdmin();
+  const { adminFetch, loading, token } = useAdmin();
   const [orders, setOrders] = useState([]);
   const [detail, setDetail] = useState(null);
   const [filter, setFilter] = useState("");
 
   const load = () => {
+    if (!token) return;
     let url = "/api/admin/orders?limit=200";
     if (filter) url += `&status=${filter}`;
-    adminFetch(url).then(setOrders).catch(() => {});
+    adminFetch(url).then((r) => r && setOrders(r)).catch(() => {});
   };
-  useEffect(load, [adminFetch, filter]);
+  useEffect(() => { if (!loading && token) load(); }, [loading, token, filter]);
 
   const updateStatus = async (orderId, status) => {
     await adminFetch(`/api/admin/orders/${orderId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }).catch(() => {});

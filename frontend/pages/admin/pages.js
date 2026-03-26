@@ -9,14 +9,14 @@ import { useAdmin } from "../../lib/useAdmin";
 const EMPTY = { title: "", slug: "", content: "", is_published: true, sort_order: "0", seo_title: "", seo_description: "" };
 
 function Pages() {
-  const { adminFetch } = useAdmin();
+  const { adminFetch, loading, token } = useAdmin();
   const [pages, setPages] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState("");
 
-  const load = () => adminFetch("/api/admin/pages").then(setPages).catch(() => {});
-  useEffect(load, [adminFetch]);
+  const load = () => { if (!token) return; adminFetch("/api/admin/pages").then((r) => r && setPages(r)).catch(() => {}); };
+  useEffect(() => { if (!loading && token) load(); }, [loading, token]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
